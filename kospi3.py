@@ -127,15 +127,12 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 if code == 'KOSPI': continue
                 stock_ret = returns_df[code]
                 
-                # 매일매일 하루 단위로 코스피보다 종목이 더 많이 오른 날을 직접 카운트
                 win_days_series = stock_ret > bench_ret
                 win_days_count = int(np.sum(win_days_series))
                 win_rate = (win_days_count / len(bench_ret)) * 100
                 
-                # 전체 기간의 단순 복리 누적 수익률 계산
                 stock_cum = (1 + stock_ret).prod() - 1
                 
-                # 하락장 방어력 지표 계산
                 down_mask = bench_ret < 0
                 if down_mask.sum() > 0:
                     downside_capture = (((1 + stock_ret[down_mask]).prod() - 1) / ((1 + bench_ret[down_mask]).prod() - 1)) * 100
@@ -160,34 +157,38 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 st.subheader(f"🏆 코스피 대비 일별 판정승 일수가 가장 많은 주도주 TOP {top_n}")
                 st.dataframe(df_res, use_container_width=True, hide_index=True)
                 
-                # ----- [보강 완료] 하단 설명서 가이드라인 레이아웃 고도화 -----
+                # ----- [화면 가시성 강화 패치] 하락장 방어력 스코어 보드 배치 -----
                 st.markdown("---")
-                with st.expander("💡 1:1 일별 승리 카운터 대시보드 종합 지표 설명서", expanded=True):
-                    st.markdown("### 📊 새롭게 바뀐 핵심 계량 투자(Quant) 지표 안내")
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.info("""
-                        **🛡️ 하락장방어력 (Downside Capture Ratio)**
-                        * **개념**: 코스피 지수가 하락 마감한 날만 솎아내어, 시장이 무너질 때 이 종목이 내 계좌에 얼마나 '방패' 역할을 해줬는지 누적으로 추적한 핵심 수치입니다.
-                        * **💡 수치별 실전 해석 가이드**:
-                          * `100% 미만 (예: 70%)`: 지수가 10% 빠질 때 혼자 7%만 떨어지며 선방한 **단단한 안전 우량주**
-                          * `100% 초과 (예: 140%)`: 하락장이 오면 지수보다 1.4배 더 깊게 폭락하는 **고위험/고변동성 종목**
-                          * `마이너스(-) 수치 (예: -30%)`: 시장 하락 폭락장인데도 역주행하며 혼자 상승을 기록한 **독보적인 초강력 주도주**
-                        """)
-                    
-                    with col2:
-                        st.info("""
-                        **🎯 지수이긴일수 및 승률 (현재 화면의 정렬 기준)**
-                        * **개념**: 3개월 동안 매일매일 하루 단위로 [종목 하루 수익률 > 코스피 하루 수익률]을 기록하며 승리한 영업일을 카운트한 지표입니다.
-                        * **투자 팁**: 일시적인 찌라시로 상한가 한 번 치고 한 달 내내 흘러내리는 작전주는 이 승률이 30% 미만으로 나옵니다. 반면 **승률이 55%를 넘고 일수가 많은 종목**은 거대 자금(기관/외국인)이 매일 꾸준히 사 모으는 진성 대장주입니다.
-                        
-                        **📈 기간수익률(%)**
-                        * **개념**: 매 영업일의 일희일비 등락을 제외하고, 조회 시작일부터 종료일까지 이 주식을 쭉 들고 있었을 때 내 계좌에 찍히는 **최종 복리 누적 성과**입니다.
-                        """)
+                st.markdown("### 🛡️ 하락장 방어력(Downside Capture Ratio) 실전 독해 가이드")
+                st.write("하락장 방어력은 지수가 **하락 마감한 날만 계산**하여 시장 대비 종목 계좌가 버텨준 비율(기준선 100%)입니다.")
+                
+                # HTML 박스 스타일 가시화 카드 배치
+                st.markdown("""
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <div style="flex: 1; background-color: #E3F2FD; border-left: 5px solid #2196F3; padding: 12px; border-radius: 4px;">
+                        <span style="font-weight: bold; color: #0D47A1; font-size: 15px;">💎 마이너스(-) 미만 수치</span><br>
+                        <span style="font-size: 13px; color: #1565C0;">시장이 폭락할 때 거꾸로 <b>혼자 상승 랠리</b>를 기록한 독보적이고 강력한 대장주 자산입니다.</span>
+                    </div>
+                    <div style="flex: 1; background-color: #E8F5E9; border-left: 5px solid #4CAF50; padding: 12px; border-radius: 4px;">
+                        <span style="font-weight: bold; color: #1B5E20; font-size: 15px;">🍏 100% 미만 수치 (예: 70%)</span><br>
+                        <span style="font-size: 13px; color: #2E7D32;">지수가 10% 깨질 때 7%만 하락하며 자산을 방어해낸 가장 이상적인 <b>안전 우량주</b>입니다.</span>
+                    </div>
+                    <div style="flex: 1; background-color: #FFEBEE; border-left: 5px solid #F44336; padding: 12px; border-radius: 4px;">
+                        <span style="font-weight: bold; color: #B71C1C; font-size: 15px;">🚨 100% 초과 수치 (예: 140%)</span><br>
+                        <span style="font-size: 13px; color: #C62828;">지수가 밀릴 때 1.4배 더 깊게 무너져 하락 타격이 매우 큰 <b>고변동성/고위험 종목</b>입니다.</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 서브 요약 박스 (우측 배치용 대안으로 깔끔하게 컴포넌트 하단 재정렬)
+                st.markdown("#### 🎯 지수이긴일수 및 기간수익률 분석법")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.info("**지수이긴확률(승률)**: 단기 작전주는 하루 상한가 후 연속 하락하여 이 승률이 30% 선에 묶이지만, 패시브 수급이 유입되는 진짜 주도주는 **55% 이상의 높은 꾸준함**을 기록합니다.")
+                with col2:
+                    st.info("**기간수익률(%)**: 조회 기간 내내 주식을 매도하지 않고 그대로 들고 계좌에 누적 보유했을 때 최종으로 얻어지는 **최종 복리 누적 결산 성과**입니다.")
                 # -------------------------------------------------------------------------
                 
                 csv = df_res.to_csv(index=False).encode('euc-kr')
                 st.download_button(label="📥 주도주 분석 결과(CSV) 다운로드", data=csv, file_name="일별_승리_주도주_스크리닝.csv", mime="text/csv")
             else:
-                st.warning("선택하신 기간 동안 코스피 지수를 한 번이라도 이긴 종목이 존재하지 않습니다.")
