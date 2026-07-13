@@ -27,7 +27,6 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
         
         status.write("📅 1. 설정된 기간의 시장 영업일 달력을 빌드하고 있습니다...")
         date_range = pd.date_range(start=start_date, end=end_date, freq='B')
-        total_days = len(date_range)
         time.sleep(0.1)
         
         status.write("📉 2. 공인 금융망에서 코스피(KOSPI) 지수 시계열 데이터를 다운로드하는 중...")
@@ -92,7 +91,8 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             for idx, code in enumerate(valid_codes):
                 df_single = df_all_stocks[df_all_stocks['srtnCd'] == code]
                 if not df_single.empty:
-                    stock_names[code] = df_single['itmsNm'].iloc[0]
+                    # [버그 수정 완료] iloc에 대괄호를 붙여 첫 번째 텍스트를 정확하게 추출하도록 수정
+                    stock_names[code] = str(df_single['itmsNm'].iloc[0])
                     
                     df_final = df_single.sort_values(by='basDt').set_index('basDt')[['clpr']]
                     df_final.columns = [code]
@@ -113,7 +113,6 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             }
             for code, name in backup_stocks.items():
                 stock_names[code] = name
-                # 가상 모드에서도 변동폭을 주어 카운트가 정상 작동하도록 패치
                 master_df[code] = kospi['KOSPI'] * np.random.uniform(0.95, 1.05, size=len(date_range))
 
         if is_backup_mode:
@@ -134,15 +133,13 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 if code == 'KOSPI': continue
                 stock_ret = returns_df[code]
                 
-                # [핵심 로직 변경] 하루하루 영업일별로 코스피보다 더 올랐던 일수 카운트
+                # 하루하루 영업일별로 코스피보다 더 올랐던 일수 카운트
                 win_days_series = stock_ret > bench_ret
-                win_days_count = int(np.sum(win_days_series)) # 승리 일수 카운트
-                win_rate = (win_days_count / len(bench_ret)) * 100 # 승률 계산
+                win_days_count = int(np.sum(win_days_series))
+                win_rate = (win_days_count / len(bench_ret)) * 100
                 
                 # 전체 기간의 단순 복리 누적 수익률 계산
                 stock_cum = (1 + stock_ret).prod() - 1
-                bench_cum = (1 + bench_ret).prod() - 1
-                alpha = stock_cum - bench_cum
                 
                 # 하락장 방어력 지표 유지
                 down_mask = bench_ret < 0
@@ -163,14 +160,12 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             status.update(label="✅ 일별 매싱 및 승리 카운트 완료!", state="complete")
             
             if results:
-                # [정렬 기준 변경] 전체 수익률이나 대략적인 초과수익률이 아닌, 실제 '지수이긴확률(승률)'이 높은 종목이 무조건 상위 탑으로 정렬!
                 df_res = pd.DataFrame(results).sort_values(by='지수이긴확률(승률)', ascending=False).head(top_n)
                 
                 st.success(f"📈 스크리닝 성공! 선택하신 기간(총 {len(bench_ret)} 영업일) 동안의 실시간 일별 추적 결과입니다.")
                 st.subheader(f"🏆 코스피 대비 일별 판정승 일수가 가장 많은 주도주 TOP {top_n}")
                 st.dataframe(df_res, use_container_width=True, hide_index=True)
                 
-                # 하단 설명서 자동 보정 업데이트
                 st.markdown("---")
                 with st.expander("💡 1:1 일별 승리 카운터 대시보드 지표 가이드", expanded=False):
                     st.markdown("### 📊 새롭게 바뀐 데이터 지표 안내")
