@@ -1,3 +1,5 @@
-streamlit==1.35.0
-yfinance==0.2.40
-finance-datareader==0.9.96
+streamlit==1.38.0
+numpy==1.26.4
+pandas==2.2.2
+requests==2.32.3
+python-dateutil==2.9.0
