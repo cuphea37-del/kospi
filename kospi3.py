@@ -90,8 +90,7 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             for idx, code in enumerate(valid_codes):
                 df_single = df_all_stocks[df_all_stocks['srtnCd'] == code]
                 if not df_single.empty:
-                    # [버그 수정 완료] 오류를 내던 구조를 지우고 첫 번째 행의 종목명을 안전하게 텍스트로 추출
-                    stock_names[code] = str(df_single['itmsNm'].values[0])
+                    stock_names[code] = str(df_single['itmsNm'].values[0]) if len(df_single['itmsNm'].values) > 0 else code
                     
                     df_final = df_single.sort_values(by='basDt').set_index('basDt')[['clpr']]
                     df_final.columns = [code]
@@ -128,7 +127,7 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 if code == 'KOSPI': continue
                 stock_ret = returns_df[code]
                 
-                # [유저 제안 로직] 매일매일 하루 단위로 코스피보다 종목이 더 많이 오른 날을 직접 카운트
+                # 매일매일 하루 단위로 코스피보다 종목이 더 많이 오른 날을 직접 카운트
                 win_days_series = stock_ret > bench_ret
                 win_days_count = int(np.sum(win_days_series))
                 win_rate = (win_days_count / len(bench_ret)) * 100
@@ -155,31 +154,38 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             status.update(label="✅ 일별 매싱 및 승리 카운트 완료!", state="complete")
             
             if results:
-                # 유저님 의견에 맞추어 일별 승률이 가장 높은 종목순으로 상위 정렬
                 df_res = pd.DataFrame(results).sort_values(by='지수이긴확률(승률)', ascending=False).head(top_n)
                 
                 st.success(f"📈 스크리닝 성공! 선택하신 기간(총 {len(bench_ret)} 영업일) 동안의 실시간 일별 추적 결과입니다.")
                 st.subheader(f"🏆 코스피 대비 일별 판정승 일수가 가장 많은 주도주 TOP {top_n}")
                 st.dataframe(df_res, use_container_width=True, hide_index=True)
                 
+                # ----- [보강 완료] 하단 설명서 가이드라인 레이아웃 고도화 -----
                 st.markdown("---")
-                with st.expander("💡 1:1 일별 승리 카운터 대시보드 지표 가이드", expanded=False):
-                    st.markdown("### 📊 새롭게 바뀐 데이터 지표 안내")
+                with st.expander("💡 1:1 일별 승리 카운터 대시보드 종합 지표 설명서", expanded=True):
+                    st.markdown("### 📊 새롭게 바뀐 핵심 계량 투자(Quant) 지표 안내")
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         st.info("""
-                        **🎯 지수이긴일수 및 승률 (주정렬 지표)**
-                        * **정의**: 3개월 동안 매 영업일마다 [종목 하루 상승률 > 코스피 하루 상승률]이었던 진짜 강했던 날을 하루하루 직접 세어 수치화했습니다.
-                        * **투자 팁**: 이 승률이 **55%를 넘어가고 일수가 많은 종목**은 찌라시로 한두 번 급등한 주식이 아니라, 시장에서 꾸준히 대량의 매수세가 유입되는 진성 주도주입니다.
+                        **🛡️ 하락장방어력 (Downside Capture Ratio)**
+                        * **개념**: 코스피 지수가 하락 마감한 날만 솎아내어, 시장이 무너질 때 이 종목이 내 계좌에 얼마나 '방패' 역할을 해줬는지 누적으로 추적한 핵심 수치입니다.
+                        * **💡 수치별 실전 해석 가이드**:
+                          * `100% 미만 (예: 70%)`: 지수가 10% 빠질 때 혼자 7%만 떨어지며 선방한 **단단한 안전 우량주**
+                          * `100% 초과 (예: 140%)`: 하락장이 오면 지수보다 1.4배 더 깊게 폭락하는 **고위험/고변동성 종목**
+                          * `마이너스(-) 수치 (예: -30%)`: 시장 하락 폭락장인데도 역주행하며 혼자 상승을 기록한 **독보적인 초강력 주도주**
                         """)
                     
                     with col2:
                         st.info("""
-                        **🛡️ 하락장방어력 (Downside Capture Ratio)**
-                        * **정의**: 코스피 지수가 마이너스를 기록한 날만 따로 격리하여 해당 종목이 얼마나 버텼는지 추적합니다.
-                        * **해석**: **100%보다 낮을수록** 지수가 폭락할 때 내 계좌의 방패 역할을 해주는 안전하고 단단한 종목입니다.
+                        **🎯 지수이긴일수 및 승률 (현재 화면의 정렬 기준)**
+                        * **개념**: 3개월 동안 매일매일 하루 단위로 [종목 하루 수익률 > 코스피 하루 수익률]을 기록하며 승리한 영업일을 카운트한 지표입니다.
+                        * **투자 팁**: 일시적인 찌라시로 상한가 한 번 치고 한 달 내내 흘러내리는 작전주는 이 승률이 30% 미만으로 나옵니다. 반면 **승률이 55%를 넘고 일수가 많은 종목**은 거대 자금(기관/외국인)이 매일 꾸준히 사 모으는 진성 대장주입니다.
+                        
+                        **📈 기간수익률(%)**
+                        * **개념**: 매 영업일의 일희일비 등락을 제외하고, 조회 시작일부터 종료일까지 이 주식을 쭉 들고 있었을 때 내 계좌에 찍히는 **최종 복리 누적 성과**입니다.
                         """)
+                # -------------------------------------------------------------------------
                 
                 csv = df_res.to_csv(index=False).encode('euc-kr')
                 st.download_button(label="📥 주도주 분석 결과(CSV) 다운로드", data=csv, file_name="일별_승리_주도주_스크리닝.csv", mime="text/csv")
