@@ -85,27 +85,22 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             valid_codes = df_filtered.sort_values(by='mrktTotAmt', ascending=False)['srtnCd'].head(30).tolist()
             time.sleep(0.1)
             
-            status.write("🔗 5. 검증된 자산들을 타임라인 배열에 정밀 바인딩하는 중...")
-            progress_bar = st.progress(0, text="종목 데이터 매싱 중...")
+            status.write("🔗 5. 검증된 우량 종목들을 배열에 바인딩하는 중...")
             
             for idx, code in enumerate(valid_codes):
                 df_single = df_all_stocks[df_all_stocks['srtnCd'] == code]
                 if not df_single.empty:
-                    # [버그 수정 완료] iloc에 대괄호를 붙여 첫 번째 텍스트를 정확하게 추출하도록 수정
-                    stock_names[code] = str(df_single['itmsNm'].iloc[0])
+                    # [버그 수정 완료] 오류를 내던 구조를 지우고 첫 번째 행의 종목명을 안전하게 텍스트로 추출
+                    stock_names[code] = str(df_single['itmsNm'].values[0])
                     
                     df_final = df_single.sort_values(by='basDt').set_index('basDt')[['clpr']]
                     df_final.columns = [code]
                     df_final = df_final.reindex(date_range).ffill().bfill()
                     master_df[code] = df_final[code]
-                
-                progress_bar.progress((idx + 1) / len(valid_codes), text=f"📥 {stock_names.get(code, '주식')} 바인딩 중 ({idx+1}/{len(valid_codes)})")
-                
-            progress_bar.empty()
             
         except Exception:
             is_backup_mode = True
-            status.write("⚠️ 금융망 트래픽 급증으로 엔진 안전용 10대 우량 자산 풀로 대체 연산합니다.")
+            status.write("⚠️ 금융망 혼잡으로 엔진 안전용 백업 모듈을 구동합니다.")
             backup_stocks = {
                 "005930": "삼성전자", "000660": "SK하이닉스", "373220": "LG에너지솔루션", 
                 "207940": "삼성바이오로직스", "005380": "현대차", "000270": "기아", 
@@ -133,7 +128,7 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 if code == 'KOSPI': continue
                 stock_ret = returns_df[code]
                 
-                # 하루하루 영업일별로 코스피보다 더 올랐던 일수 카운트
+                # [유저 제안 로직] 매일매일 하루 단위로 코스피보다 종목이 더 많이 오른 날을 직접 카운트
                 win_days_series = stock_ret > bench_ret
                 win_days_count = int(np.sum(win_days_series))
                 win_rate = (win_days_count / len(bench_ret)) * 100
@@ -141,7 +136,7 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 # 전체 기간의 단순 복리 누적 수익률 계산
                 stock_cum = (1 + stock_ret).prod() - 1
                 
-                # 하락장 방어력 지표 유지
+                # 하락장 방어력 지표 계산
                 down_mask = bench_ret < 0
                 if down_mask.sum() > 0:
                     downside_capture = (((1 + stock_ret[down_mask]).prod() - 1) / ((1 + bench_ret[down_mask]).prod() - 1)) * 100
@@ -160,6 +155,7 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             status.update(label="✅ 일별 매싱 및 승리 카운트 완료!", state="complete")
             
             if results:
+                # 유저님 의견에 맞추어 일별 승률이 가장 높은 종목순으로 상위 정렬
                 df_res = pd.DataFrame(results).sort_values(by='지수이긴확률(승률)', ascending=False).head(top_n)
                 
                 st.success(f"📈 스크리닝 성공! 선택하신 기간(총 {len(bench_ret)} 영업일) 동안의 실시간 일별 추적 결과입니다.")
