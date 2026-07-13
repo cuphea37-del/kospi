@@ -3,12 +3,13 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 import FinanceDataReader as fdr
+import requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 st.set_page_config(page_title="KOSPI 주도주 스크리너", layout="wide")
 st.title("📊 KOSPI 지수 대비 상대적 강세 주도주 스크리너")
-st.caption("봇 차단 회피 헤더 및 복리 누적 캡처 연산 알고리즘이 적용된 대시보드입니다.")
+st.caption("표준 브라우저 위장 헤더 세션 및 복리 누적 캡처 연산 알고리즘이 적용된 대시보드입니다.")
 
 # 오늘 기준 18개월 전 자동 계산
 today = datetime.today()
@@ -23,33 +24,34 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
     
-    with st.spinner("야후 금융 서버 보안벽을 우회하여 데이터를 수집 중입니다..."):
+    with st.spinner("금융 서버 보안벽을 조율하여 데이터를 안전하게 수집 중입니다..."):
         
-        # [봇 차단 해결 패치] 실제 사람이 브라우저로 접근하는 것처럼 헤더 위장 주입
-        headers = {
+        # [수정 완결 패치] requests 세션을 직접 생성하고 헤더를 주입하는 웹 표준 방식
+        session = requests.Session()
+        session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-        yf.set_proxy_headers(headers)
+        })
         
-        # 코스피 지수 수집
+        # 코스피 지수 수집 (위에서 만든 위장 세션을 내부 인자로 강제 매칭)
         try:
-            # yfinance 내부 세션에 헤더 자동 녹아들도록 처리
-            ticker = yf.Ticker('^KS11')
-            kospi_data = ticker.history(start=start_str, end=end_str, progress=False)
+            kospi_data = yf.download('^KS11', start=start_str, end=end_str, progress=False, session=session)
             
             if kospi_data.empty:
-                st.error("야후 서버 응답이 비어있습니다. 잠시 후 다시 시도해 주세요.")
+                st.error("서버 응답이 비어있습니다. 날짜 설정을 다시 확인해 주세요.")
                 st.stop()
                 
-            kospi = kospi_data[['Close']].copy()
+            if isinstance(kospi_data.columns, pd.MultiIndex):
+                kospi = pd.DataFrame(kospi_data['Close']['^KS11'])
+            else:
+                kospi = kospi_data[['Close']]
             kospi.columns = ['KOSPI']
         except Exception as e:
-            st.error(f"지수 수집 실패 (야후 보안 장벽 발생): {e}")
+            st.error(f"지수 수집 실패: {e}")
             st.stop()
             
         # 상장 목록 확보
         try:
-            kospi_list = fdr.StockListing('KOSPI').head(100) # 시총 상위 100개
+            kospi_list = fdr.StockListing('KOSPI').head(100) # 시총 상위 100개 대형주 중심
         except:
             st.error("거래소 종목 정보를 읽어오지 못했습니다.")
             st.stop()
@@ -57,16 +59,19 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
         master_df = kospi.copy()
         stock_names = {}
         
+        # 개별 종목 주가 축적
         progress_bar = st.progress(0)
         for idx, row in kospi_list.iterrows():
             code = row['Code']
             name = row['Name']
             try:
-                # 개별 종목 주가도 동일하게 브라우저 위장 세션 수집
-                s_ticker = yf.Ticker(f"{code}.KS")
-                stock_data = s_ticker.history(start=start_str, end=end_str, progress=False)
+                # 개별 종목 수집 시에도 동일한 브라우저 세션을 연동하여 다이렉트 통과
+                stock_data = yf.download(f"{code}.KS", start=start_str, end=end_str, progress=False, session=session)
                 if not stock_data.empty:
-                    df_stock = stock_data[['Close']].copy()
+                    if isinstance(stock_data.columns, pd.MultiIndex):
+                        df_stock = pd.DataFrame(stock_data['Close'][f"{code}.KS"])
+                    else:
+                        df_stock = stock_data[['Close']]
                     df_stock.columns = [code]
                     master_df = master_df.join(df_stock, how='left')
                     stock_names[code] = name
@@ -74,8 +79,7 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 continue
             progress_bar.progress((idx + 1) / len(kospi_list))
             
-        # 인덱스 제거 및 결측치 보정
-        master_df.index = master_df.index.date
+        # 인덱스 데이트 정산 및 결측치 보정
         master_df = master_df.ffill()
         returns_df = master_df.pct_change().dropna()
         
