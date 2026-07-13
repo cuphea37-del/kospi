@@ -150,6 +150,7 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             
             status.update(label="✅ 일별 매싱 및 승리 카운트 완료!", state="complete")
             
+            # [교정 완료] else 구문 내부 블록의 들여쓰기 공백 배열을 규격화하여 정상 작동 보장
             if results:
                 df_res = pd.DataFrame(results).sort_values(by='지수이긴확률(승률)', ascending=False).head(top_n)
                 
@@ -157,12 +158,10 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 st.subheader(f"🏆 코스피 대비 일별 판정승 일수가 가장 많은 주도주 TOP {top_n}")
                 st.dataframe(df_res, use_container_width=True, hide_index=True)
                 
-                # ----- [화면 가시성 강화 패치] 하락장 방어력 스코어 보드 배치 -----
                 st.markdown("---")
                 st.markdown("### 🛡️ 하락장 방어력(Downside Capture Ratio) 실전 독해 가이드")
                 st.write("하락장 방어력은 지수가 **하락 마감한 날만 계산**하여 시장 대비 종목 계좌가 버텨준 비율(기준선 100%)입니다.")
                 
-                # HTML 박스 스타일 가시화 카드 배치
                 st.markdown("""
                 <div style="display: flex; gap: 15px; margin-bottom: 20px;">
                     <div style="flex: 1; background-color: #E3F2FD; border-left: 5px solid #2196F3; padding: 12px; border-radius: 4px;">
@@ -180,15 +179,14 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # 서브 요약 박스 (우측 배치용 대안으로 깔끔하게 컴포넌트 하단 재정렬)
                 st.markdown("#### 🎯 지수이긴일수 및 기간수익률 분석법")
                 col1, col2 = st.columns(2)
                 with col1:
                     st.info("**지수이긴확률(승률)**: 단기 작전주는 하루 상한가 후 연속 하락하여 이 승률이 30% 선에 묶이지만, 패시브 수급이 유입되는 진짜 주도주는 **55% 이상의 높은 꾸준함**을 기록합니다.")
                 with col2:
                     st.info("**기간수익률(%)**: 조회 기간 내내 주식을 매도하지 않고 그대로 들고 계좌에 누적 보유했을 때 최종으로 얻어지는 **최종 복리 누적 결산 성과**입니다.")
-                # -------------------------------------------------------------------------
                 
                 csv = df_res.to_csv(index=False).encode('euc-kr')
                 st.download_button(label="📥 주도주 분석 결과(CSV) 다운로드", data=csv, file_name="일별_승리_주도주_스크리닝.csv", mime="text/csv")
             else:
+                st.warning("선택하신 기간 동안 코스피 지수를 한 번이라도 이긴 종목이 존재하지 않습니다.")
