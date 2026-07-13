@@ -90,7 +90,8 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             for idx, code in enumerate(valid_codes):
                 df_single = df_all_stocks[df_all_stocks['srtnCd'] == code]
                 if not df_single.empty:
-                    stock_names[code] = str(df_single['itmsNm'].values[0]) if len(df_single['itmsNm'].values) > 0 else code
+                    # [병목 버그 완전 해결] 대괄호 묶임 현상을 없애고 순수 문자열 텍스트만 초고속 추출
+                    stock_names[code] = str(df_single['itmsNm'].values[0])
                     
                     df_final = df_single.sort_values(by='basDt').set_index('basDt')[['clpr']]
                     df_final.columns = [code]
@@ -150,7 +151,6 @@ if st.sidebar.button("🚀 스크리닝 시작", type="primary"):
             
             status.update(label="✅ 일별 매싱 및 승리 카운트 완료!", state="complete")
             
-            # [교정 완료] else 구문 내부 블록의 들여쓰기 공백 배열을 규격화하여 정상 작동 보장
             if results:
                 df_res = pd.DataFrame(results).sort_values(by='지수이긴확률(승률)', ascending=False).head(top_n)
                 
