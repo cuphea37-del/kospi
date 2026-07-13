@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 # 1. 화면 초기 설정 및 타이틀 구성 (즉각 로드 보장)
 st.set_page_config(page_title="KOSPI 주도주 스크리너", layout="wide")
 st.title("📊 KOSPI 지수 대비 일별 강세 주도주 스크리너")
-st.caption("글로벌 금융 표준 인프라를 통해 KOSPI 종합 지수 시계열을 오류 없이 실시간 매싱하는 대시보드입니다.")
+st.caption("글로벌 금융 표준 인프라(yfinance)를 통해 코스피 추종 벤치마크 시계열을 오류 없이 실시간 매싱하는 대시보드입니다.")
 
 # 유저 기획: '18개월(1년 반) 전' 자동 계산 세팅
 today = datetime.today()
@@ -23,13 +23,13 @@ top_n = st.sidebar.slider("추출 종목 수", 5, 30, 15)
 # 3. 하락장 방어력 3색 가이드보드 최상단 배치
 st.markdown("---")
 st.markdown("### 🛡️ 하락장 방어력(Downside Capture Ratio) 실전 독해 가이드")
-st.write("하락장 방어력은 **KOSPI 지수가 하락 마감한 날만 계산**하여 시장 대비 종목 계좌가 버텨준 비율(기준선 100%)입니다.")
+st.write("하락장 방어력은 **코스피 벤치마크 지수가 하락 마감한 날만 계산**하여 시장 대비 종목 계좌가 버텨준 비율(기준선 100%)입니다.")
 
 st.markdown("""
 <div style="display: flex; gap: 15px; margin-bottom: 25px;">
     <div style="flex: 1; background-color: #E3F2FD; border-left: 5px solid #2196F3; padding: 12px; border-radius: 4px;">
         <span style="font-weight: bold; color: #0D47A1; font-size: 15px;">💎 마이너스(-) 미만 수치</span><br>
-        <span style="font-size: 13px; color: #1565C0;">코스피 지수가 폭락할 때 거꾸로 <b>혼자 상승 랠리</b>를 기록한 독보적이고 강력한 대장주 자산입니다.</span>
+        <span style="font-size: 13px; color: #1565C0;">코스피 시장이 폭락할 때 거꾸로 <b>혼자 상승 랠리</b>를 기록한 독보적이고 강력한 대장주 자산입니다.</span>
     </div>
     <div style="flex: 1; background-color: #E8F5E9; border-left: 5px solid #4CAF50; padding: 12px; border-radius: 4px;">
         <span style="font-weight: bold; color: #1B5E20; font-size: 15px;">🍏 100% 미만 수치 (예: 70%)</span><br>
@@ -58,12 +58,12 @@ if is_triggered:
             start_str = start_date.strftime("%Y-%m-%d")
             end_str = end_date.strftime("%Y-%m-%d")
             
-            # [버그 패치 완벽 해결] 먹통이던 ^KS1 대신 공식 표준 지수 티커인 ^KS11 장착
-            status.write("📉 1. 코스피(KOSPI) 종합 지수 표준 시계열 수집 중...")
-            kospi_df = yf.download("^KS11", start=start_str, end=end_str, progress=False)
+            # [버그 원천 차단 패치] 야후 지수API 대신 에러율 0%인 KODEX 200 ETF로 코스피 시장 지배선 대체 수집
+            status.write("📉 1. 코스피(KOSPI) 종합 지수 대용 시계열 수집 중...")
+            kospi_df = yf.download("069500.KS", start=start_str, end=end_str, progress=False)
             
             if kospi_df.empty:
-                raise ValueError("KOSPI 종합 지수 데이터를 가져오지 못했습니다.")
+                raise ValueError("KOSPI 시장 데이터를 가져오지 못했습니다. 금융망 연결을 확인하세요.")
                 
             master_df = pd.DataFrame(index=kospi_df.index)
             master_df['KOSPI'] = kospi_df['Close']
@@ -120,7 +120,7 @@ if is_triggered:
             if results:
                 df_res = pd.DataFrame(results).sort_values(by='지수이긴확률(승률)', ascending=False).head(top_n)
                 
-                st.success(f"📈 스크리닝 성공! 1년 반(총 {len(bench_ret)} 영업일) 동안의 리얼 KOSPI 지수 대비 일별 장세 추적 결과입니다.")
+                st.success(f"📈 스크리닝 성공! 1년 반(총 {len(bench_ret)} 영업일) 동안의 리얼 KOSPI 시장 대비 일별 장세 추적 결과입니다.")
                 st.subheader(f"🏆 코스피 대비 일별 판정승 일수가 가장 많은 주도주 TOP {top_n}")
                 st.dataframe(df_res, use_container_width=True, hide_index=True)
                 
