@@ -1,7 +1,6 @@
-streamlit
-numpy
-pandas
-yfinance
-finance-datareader
-python-dateutil
-lxml
+streamlit==1.35.0
+numpy<2.0.0
+pandas==2.2.2
+yfinance==0.2.40
+finance-datareader==0.9.96
+python-dateutil==2.9.0
